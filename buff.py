@@ -1,5 +1,4 @@
 import argparse
-import binascii
 import socket
 import sys
 import time
